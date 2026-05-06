@@ -7,6 +7,7 @@
     app_path: /var/www/laravel
     repo_url: https://github.com/laravel/laravel.git
     repo_branch: master
+    ansible_remote_tmp: /tmp/.ansible/tmp
 
   tasks:
 
@@ -35,13 +36,6 @@
     - name: Mark laravel directory as safe for git
       command: git config --global --add safe.directory /var/www/laravel
       changed_when: false
-
-    - name: Clone Laravel repo
-      git:
-        repo: "{{ repo_url }}"
-        dest: "{{ app_path }}"
-        version: "{{ repo_branch }}"
-        force: yes
 
     - name: Clone Laravel repo
       git:
@@ -84,7 +78,6 @@
       command: php artisan key:generate
       args:
         chdir: "{{ app_path }}"
-      become_user: www-data
 
     - name: Configure Apache virtual host
       copy:
