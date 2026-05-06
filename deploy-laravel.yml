@@ -19,14 +19,14 @@
         name:
           - apache2
           - git
-          - php
-          - php-cli
-          - php-mbstring
-          - php-xml
-          - php-curl
-          - php-zip
-          - php-mysql
-          - libapache2-mod-php
+          - php8.5
+          - php8.5-cli
+          - php8.5-mbstring
+          - php8.5-xml
+          - php8.5-curl
+          - php8.5-mysql
+          - php8.5-sqlite3
+          - libapache2-mod-php8.5
           - composer
           - unzip
         state: present
@@ -38,7 +38,7 @@
         version: "{{ repo_branch }}"
         force: yes
 
-    - name: Set directory permissions
+    - name: Set directory ownership
       file:
         path: "{{ app_path }}"
         owner: www-data
