@@ -124,3 +124,28 @@
       systemd:
         name: apache2
         state: restarted
+
+    - name: Send Discord notification
+      uri:
+        url: "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
+        method: POST
+        body_format: json
+        body:
+          content: ""
+          embeds:
+            - title: "✅ Deploy Successful"
+              color: 3066993
+              fields:
+                - name: "Project"
+                  value: "Laravel EC2"
+                  inline: true
+                - name: "Server"
+                  value: "52.221.230.166"
+                  inline: true
+                - name: "Branch"
+                  value: "{{ repo_branch }}"
+                  inline: true
+                - name: "Status"
+                  value: "SUCCESS"
+                  inline: true
+        status_code: 204
