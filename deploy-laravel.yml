@@ -16,7 +16,7 @@
 
     - name: Record deployment start time
       set_fact:
-        deploy_start: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
+        deploy_start: "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }} UTC"
 
     - block:
 
@@ -136,7 +136,7 @@
 
         - name: Record deployment end time
           set_fact:
-            deploy_end: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
+            deploy_end: "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }} UTC"
 
         - name: Send Discord success report
           uri:
@@ -182,7 +182,7 @@
 
         - name: Record failure time
           set_fact:
-            deploy_end: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
+            deploy_end: "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }} UTC"
 
         - name: Send Discord failure report
           uri:
