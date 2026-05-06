@@ -23,7 +23,6 @@
           - php-cli
           - php-mbstring
           - php-xml
-          - php-bcmath
           - php-curl
           - php-zip
           - php-mysql
