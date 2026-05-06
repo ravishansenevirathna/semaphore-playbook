@@ -77,11 +77,13 @@
         command: install
         working_dir: "{{ app_path }}"
         no_dev: no
+      become_user: www-data
 
     - name: Generate Laravel app key
       command: php artisan key:generate
       args:
         chdir: "{{ app_path }}"
+      become_user: www-data
 
     - name: Configure Apache virtual host
       copy:
