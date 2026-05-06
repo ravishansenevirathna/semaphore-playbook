@@ -1,0 +1,105 @@
+---
+- name: Deploy Laravel App on EC2
+  hosts: ec2
+  become: yes
+
+  vars:
+    app_path: /var/www/laravel
+    repo_url: https://github.com/laravel/laravel.git
+    repo_branch: master
+
+  tasks:
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install required packages
+      apt:
+        name:
+          - apache2
+          - git
+          - php
+          - php-cli
+          - php-mbstring
+          - php-xml
+          - php-bcmath
+          - php-curl
+          - php-zip
+          - php-mysql
+          - libapache2-mod-php
+          - composer
+          - unzip
+        state: present
+
+    - name: Clone Laravel repo
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_path }}"
+        version: "{{ repo_branch }}"
+        force: yes
+
+    - name: Set directory permissions
+      file:
+        path: "{{ app_path }}"
+        owner: www-data
+        group: www-data
+        recurse: yes
+
+    - name: Set storage and cache writable
+      file:
+        path: "{{ item }}"
+        mode: "0775"
+        recurse: yes
+      loop:
+        - "{{ app_path }}/storage"
+        - "{{ app_path }}/bootstrap/cache"
+
+    - name: Copy .env file
+      copy:
+        src: "{{ app_path }}/.env.example"
+        dest: "{{ app_path }}/.env"
+        remote_src: yes
+        force: no
+
+    - name: Install composer dependencies
+      composer:
+        command: install
+        working_dir: "{{ app_path }}"
+        no_dev: no
+
+    - name: Generate Laravel app key
+      command: php artisan key:generate
+      args:
+        chdir: "{{ app_path }}"
+
+    - name: Configure Apache virtual host
+      copy:
+        dest: /etc/apache2/sites-available/laravel.conf
+        content: |
+          <VirtualHost *:80>
+              ServerAdmin admin@localhost
+              DocumentRoot /var/www/laravel/public
+
+              <Directory /var/www/laravel/public>
+                  AllowOverride All
+                  Require all granted
+              </Directory>
+
+              ErrorLog ${APACHE_LOG_DIR}/laravel_error.log
+              CustomLog ${APACHE_LOG_DIR}/laravel_access.log combined
+          </VirtualHost>
+
+    - name: Enable Laravel site
+      command: a2ensite laravel.conf
+
+    - name: Enable mod_rewrite
+      command: a2enmod rewrite
+
+    - name: Disable default Apache site
+      command: a2dissite 000-default.conf
+
+    - name: Restart Apache
+      systemd:
+        name: apache2
+        state: restarted
