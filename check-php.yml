@@ -1,0 +1,13 @@
+---
+- name: Check available PHP packages
+  hosts: ec2
+  become: yes
+
+  tasks:
+    - name: Get available PHP packages
+      command: apt-cache search php
+      register: php_packages
+
+    - name: Show PHP packages
+      debug:
+        msg: "{{ php_packages.stdout_lines }}"
