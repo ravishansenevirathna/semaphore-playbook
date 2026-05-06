@@ -31,6 +31,17 @@
           - unzip
         state: present
 
+    - name: Mark laravel directory as safe for git
+      command: git config --global --add safe.directory /var/www/laravel
+      changed_when: false
+
+    - name: Clone Laravel repo
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_path }}"
+        version: "{{ repo_branch }}"
+        force: yes
+
     - name: Clone Laravel repo
       git:
         repo: "{{ repo_url }}"
