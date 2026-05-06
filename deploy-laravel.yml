@@ -12,6 +12,10 @@
 
   tasks:
 
+    - name: Record deployment start time
+      set_fact:
+        deploy_start: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
+
     - name: Update apt cache
       apt:
         update_cache: yes
@@ -126,27 +130,101 @@
         name: apache2
         state: restarted
 
-    - name: Send Discord notification
+    - name: Record deployment end time
+      set_fact:
+        deploy_end: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
+
+    - name: Send Discord success report
       uri:
         url: "{{ discord_webhook_url }}"
         method: POST
         body_format: json
         body:
-          content: ""
+          username: "Semaphore CI/CD"
           embeds:
-            - title: "✅ Deploy Successful"
+            - title: "✅ Deployment Successful"
               color: 3066993
+              timestamp: "{{ ansible_date_time.iso8601 }}"
               fields:
-                - name: "Project"
-                  value: "Laravel EC2"
+                - name: "📦 Project"
+                  value: "{{ project_name }}"
                   inline: true
-                - name: "Server"
-                  value: "52.221.230.166"
+                - name: "🌍 Environment"
+                  value: "{{ environment_name }}"
                   inline: true
-                - name: "Branch"
+                - name: "🌿 Branch"
                   value: "{{ repo_branch }}"
                   inline: true
-                - name: "Status"
-                  value: "SUCCESS"
+                - name: "🖥️ Server"
+                  value: "{{ inventory_hostname }}"
                   inline: true
+                - name: "🐧 OS"
+                  value: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+                  inline: true
+                - name: "👤 Triggered By"
+                  value: "{{ ansible_user_id }}"
+                  inline: true
+                - name: "🕐 Started"
+                  value: "{{ deploy_start }}"
+                  inline: true
+                - name: "🕑 Finished"
+                  value: "{{ deploy_end }}"
+                  inline: true
+                - name: "📋 Task Summary"
+                  value: |
+                    ✅ OK: {{ ansible_stats.summarize[inventory_hostname].ok | default(0) }}
+                    🔄 Changed: {{ ansible_stats.summarize[inventory_hostname].changed | default(0) }}
+                    ⏭️ Skipped: {{ ansible_stats.summarize[inventory_hostname].skipped | default(0) }}
+                    ❌ Failed: {{ ansible_stats.summarize[inventory_hostname].failures | default(0) }}
+                  inline: false
+              footer:
+                text: "Semaphore Ansible Automation • MintHRM DevOps"
+        status_code: 204
+
+  rescue:
+    - name: Record failure time
+      set_fact:
+        deploy_end: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
+
+    - name: Send Discord failure report
+      uri:
+        url: "{{ discord_webhook }}"
+        method: POST
+        body_format: json
+        body:
+          username: "Semaphore CI/CD"
+          embeds:
+            - title: "❌ Deployment FAILED"
+              color: 15158332
+              timestamp: "{{ ansible_date_time.iso8601 }}"
+              fields:
+                - name: "📦 Project"
+                  value: "{{ project_name }}"
+                  inline: true
+                - name: "🌍 Environment"
+                  value: "{{ environment_name }}"
+                  inline: true
+                - name: "🌿 Branch"
+                  value: "{{ repo_branch }}"
+                  inline: true
+                - name: "🖥️ Server"
+                  value: "{{ inventory_hostname }}"
+                  inline: true
+                - name: "🐧 OS"
+                  value: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+                  inline: true
+                - name: "👤 Triggered By"
+                  value: "{{ ansible_user_id }}"
+                  inline: true
+                - name: "🕐 Started"
+                  value: "{{ deploy_start }}"
+                  inline: true
+                - name: "🕑 Failed At"
+                  value: "{{ deploy_end }}"
+                  inline: true
+                - name: "🚨 Action Required"
+                  value: "Check Semaphore task logs immediately and rollback if needed"
+                  inline: false
+              footer:
+                text: "Semaphore Ansible Automation • MintHRM DevOps"
         status_code: 204
