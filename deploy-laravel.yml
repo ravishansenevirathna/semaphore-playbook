@@ -29,6 +29,7 @@
           - libapache2-mod-php8.5
           - composer
           - unzip
+          - acl
         state: present
 
     - name: Mark laravel directory as safe for git
@@ -73,11 +74,11 @@
         force: no
 
     - name: Install composer dependencies
-      composer:
-        command: install
-        working_dir: "{{ app_path }}"
-        no_dev: no
-      become_user: www-data
+      shell: composer install --no-interaction --prefer-dist
+      args:
+        chdir: "{{ app_path }}"
+      environment:
+        COMPOSER_ALLOW_SUPERUSER: "1"
 
     - name: Generate Laravel app key
       command: php artisan key:generate
