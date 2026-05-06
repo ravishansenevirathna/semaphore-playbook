@@ -8,6 +8,8 @@
     repo_url: https://github.com/laravel/laravel.git
     repo_branch: master
     ansible_remote_tmp: /tmp/.ansible/tmp
+    project_name: "Laravel EC2"
+    environment_name: "Production"
     discord_webhook_url: "{{ lookup('env', 'DISCORD_WEBHOOK_URL') }}"
 
   tasks:
@@ -16,215 +18,211 @@
       set_fact:
         deploy_start: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
 
-    - name: Update apt cache
-      apt:
-        update_cache: yes
+    - block:
 
-    - name: Install required packages
-      apt:
-        name:
-          - apache2
-          - git
-          - php8.5
-          - php8.5-cli
-          - php8.5-mbstring
-          - php8.5-xml
-          - php8.5-curl
-          - php8.5-mysql
-          - php8.5-sqlite3
-          - libapache2-mod-php8.5
-          - composer
-          - unzip
-          - acl
-        state: present
+        - name: Update apt cache
+          apt:
+            update_cache: yes
 
-    - name: Mark laravel directory as safe for git
-      command: git config --global --add safe.directory /var/www/laravel
-      changed_when: false
+        - name: Install required packages
+          apt:
+            name:
+              - apache2
+              - git
+              - php8.5
+              - php8.5-cli
+              - php8.5-mbstring
+              - php8.5-xml
+              - php8.5-curl
+              - php8.5-mysql
+              - php8.5-sqlite3
+              - libapache2-mod-php8.5
+              - composer
+              - unzip
+              - acl
+            state: present
 
-    - name: Clone Laravel repo
-      git:
-        repo: "{{ repo_url }}"
-        dest: "{{ app_path }}"
-        version: "{{ repo_branch }}"
-        force: yes
+        - name: Mark laravel directory as safe for git
+          command: git config --global --add safe.directory /var/www/laravel
+          changed_when: false
 
-    - name: Set directory ownership
-      file:
-        path: "{{ app_path }}"
-        owner: www-data
-        group: www-data
-        recurse: yes
+        - name: Clone Laravel repo
+          git:
+            repo: "{{ repo_url }}"
+            dest: "{{ app_path }}"
+            version: "{{ repo_branch }}"
+            force: yes
 
-    - name: Set storage and cache writable
-      file:
-        path: "{{ item }}"
-        mode: "0775"
-        recurse: yes
-      loop:
-        - "{{ app_path }}/storage"
-        - "{{ app_path }}/bootstrap/cache"
+        - name: Set directory ownership
+          file:
+            path: "{{ app_path }}"
+            owner: www-data
+            group: www-data
+            recurse: yes
 
-    - name: Copy .env file
-      copy:
-        src: "{{ app_path }}/.env.example"
-        dest: "{{ app_path }}/.env"
-        remote_src: yes
-        force: no
+        - name: Set storage and cache writable
+          file:
+            path: "{{ item }}"
+            mode: "0775"
+            recurse: yes
+          loop:
+            - "{{ app_path }}/storage"
+            - "{{ app_path }}/bootstrap/cache"
 
-    - name: Install composer dependencies
-      shell: composer install --no-interaction --prefer-dist
-      args:
-        chdir: "{{ app_path }}"
-      environment:
-        COMPOSER_ALLOW_SUPERUSER: "1"
+        - name: Copy .env file
+          copy:
+            src: "{{ app_path }}/.env.example"
+            dest: "{{ app_path }}/.env"
+            remote_src: yes
+            force: no
 
-    - name: Generate Laravel app key
-      command: php artisan key:generate
-      args:
-        chdir: "{{ app_path }}"
+        - name: Install composer dependencies
+          shell: composer install --no-interaction --prefer-dist
+          args:
+            chdir: "{{ app_path }}"
+          environment:
+            COMPOSER_ALLOW_SUPERUSER: "1"
 
-    - name: Configure Apache virtual host
-      copy:
-        dest: /etc/apache2/sites-available/laravel.conf
-        content: |
-          <VirtualHost *:80>
-              ServerAdmin admin@localhost
-              DocumentRoot /var/www/laravel/public
+        - name: Generate Laravel app key
+          command: php artisan key:generate
+          args:
+            chdir: "{{ app_path }}"
 
-              <Directory /var/www/laravel/public>
-                  AllowOverride All
-                  Require all granted
-              </Directory>
+        - name: Configure Apache virtual host
+          copy:
+            dest: /etc/apache2/sites-available/laravel.conf
+            content: |
+              <VirtualHost *:80>
+                  ServerAdmin admin@localhost
+                  DocumentRoot /var/www/laravel/public
 
-              ErrorLog ${APACHE_LOG_DIR}/laravel_error.log
-              CustomLog ${APACHE_LOG_DIR}/laravel_access.log combined
-          </VirtualHost>
+                  <Directory /var/www/laravel/public>
+                      AllowOverride All
+                      Require all granted
+                  </Directory>
 
-    - name: Enable Laravel site
-      command: a2ensite laravel.conf
+                  ErrorLog ${APACHE_LOG_DIR}/laravel_error.log
+                  CustomLog ${APACHE_LOG_DIR}/laravel_access.log combined
+              </VirtualHost>
 
-    - name: Enable mod_rewrite
-      command: a2enmod rewrite
+        - name: Enable Laravel site
+          command: a2ensite laravel.conf
 
-    - name: Disable default Apache site
-      command: a2dissite 000-default.conf
+        - name: Enable mod_rewrite
+          command: a2enmod rewrite
 
-    - name: Create SQLite database file
-      file:
-        path: "{{ app_path }}/database/database.sqlite"
-        state: touch
-        owner: www-data
-        group: www-data
-        mode: "0664"
+        - name: Disable default Apache site
+          command: a2dissite 000-default.conf
 
-    - name: Run Laravel migrations
-      shell: php artisan migrate --force
-      args:
-        chdir: "{{ app_path }}"
-      environment:
-        COMPOSER_ALLOW_SUPERUSER: "1"
+        - name: Create SQLite database file
+          file:
+            path: "{{ app_path }}/database/database.sqlite"
+            state: touch
+            owner: www-data
+            group: www-data
+            mode: "0664"
 
-    - name: Restart Apache
-      systemd:
-        name: apache2
-        state: restarted
+        - name: Run Laravel migrations
+          shell: php artisan migrate --force
+          args:
+            chdir: "{{ app_path }}"
+          environment:
+            COMPOSER_ALLOW_SUPERUSER: "1"
 
-    - name: Record deployment end time
-      set_fact:
-        deploy_end: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
+        - name: Restart Apache
+          systemd:
+            name: apache2
+            state: restarted
 
-    - name: Send Discord success report
-      uri:
-        url: "{{ discord_webhook_url }}"
-        method: POST
-        body_format: json
-        body:
-          username: "Semaphore CI/CD"
-          embeds:
-            - title: "✅ Deployment Successful"
-              color: 3066993
-              timestamp: "{{ ansible_date_time.iso8601 }}"
-              fields:
-                - name: "📦 Project"
-                  value: "{{ project_name }}"
-                  inline: true
-                - name: "🌍 Environment"
-                  value: "{{ environment_name }}"
-                  inline: true
-                - name: "🌿 Branch"
-                  value: "{{ repo_branch }}"
-                  inline: true
-                - name: "🖥️ Server"
-                  value: "{{ inventory_hostname }}"
-                  inline: true
-                - name: "🐧 OS"
-                  value: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
-                  inline: true
-                - name: "👤 Triggered By"
-                  value: "{{ ansible_user_id }}"
-                  inline: true
-                - name: "🕐 Started"
-                  value: "{{ deploy_start }}"
-                  inline: true
-                - name: "🕑 Finished"
-                  value: "{{ deploy_end }}"
-                  inline: true
-                - name: "📋 Task Summary"
-                  value: |
-                    ✅ OK: {{ ansible_stats.summarize[inventory_hostname].ok | default(0) }}
-                    🔄 Changed: {{ ansible_stats.summarize[inventory_hostname].changed | default(0) }}
-                    ⏭️ Skipped: {{ ansible_stats.summarize[inventory_hostname].skipped | default(0) }}
-                    ❌ Failed: {{ ansible_stats.summarize[inventory_hostname].failures | default(0) }}
-                  inline: false
-              footer:
-                text: "Semaphore Ansible Automation • MintHRM DevOps"
-        status_code: 204
+        - name: Record deployment end time
+          set_fact:
+            deploy_end: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
 
-  rescue:
-    - name: Record failure time
-      set_fact:
-        deploy_end: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
+        - name: Send Discord success report
+          uri:
+            url: "{{ discord_webhook_url }}"
+            method: POST
+            body_format: json
+            body:
+              username: "Semaphore CI/CD"
+              embeds:
+                - title: "✅ Deployment Successful"
+                  color: 3066993
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  fields:
+                    - name: "📦 Project"
+                      value: "{{ project_name }}"
+                      inline: true
+                    - name: "🌍 Environment"
+                      value: "{{ environment_name }}"
+                      inline: true
+                    - name: "🌿 Branch"
+                      value: "{{ repo_branch }}"
+                      inline: true
+                    - name: "🖥️ Server"
+                      value: "{{ inventory_hostname }}"
+                      inline: true
+                    - name: "🐧 OS"
+                      value: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+                      inline: true
+                    - name: "👤 Triggered By"
+                      value: "{{ ansible_user_id }}"
+                      inline: true
+                    - name: "🕐 Started"
+                      value: "{{ deploy_start }}"
+                      inline: true
+                    - name: "🕑 Finished"
+                      value: "{{ deploy_end }}"
+                      inline: true
+                  footer:
+                    text: "Semaphore Ansible Automation • MintHRM DevOps"
+            status_code: 204
 
-    - name: Send Discord failure report
-      uri:
-        url: "{{ discord_webhook }}"
-        method: POST
-        body_format: json
-        body:
-          username: "Semaphore CI/CD"
-          embeds:
-            - title: "❌ Deployment FAILED"
-              color: 15158332
-              timestamp: "{{ ansible_date_time.iso8601 }}"
-              fields:
-                - name: "📦 Project"
-                  value: "{{ project_name }}"
-                  inline: true
-                - name: "🌍 Environment"
-                  value: "{{ environment_name }}"
-                  inline: true
-                - name: "🌿 Branch"
-                  value: "{{ repo_branch }}"
-                  inline: true
-                - name: "🖥️ Server"
-                  value: "{{ inventory_hostname }}"
-                  inline: true
-                - name: "🐧 OS"
-                  value: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
-                  inline: true
-                - name: "👤 Triggered By"
-                  value: "{{ ansible_user_id }}"
-                  inline: true
-                - name: "🕐 Started"
-                  value: "{{ deploy_start }}"
-                  inline: true
-                - name: "🕑 Failed At"
-                  value: "{{ deploy_end }}"
-                  inline: true
-                - name: "🚨 Action Required"
-                  value: "Check Semaphore task logs immediately and rollback if needed"
-                  inline: false
-              footer:
-                text: "Semaphore Ansible Automation • MintHRM DevOps"
-        status_code: 204
+      rescue:
+
+        - name: Record failure time
+          set_fact:
+            deploy_end: "{{ ansible_date_time.date }} {{ ansible_date_time.time }} UTC"
+
+        - name: Send Discord failure report
+          uri:
+            url: "{{ discord_webhook_url }}"
+            method: POST
+            body_format: json
+            body:
+              username: "Semaphore CI/CD"
+              embeds:
+                - title: "❌ Deployment FAILED"
+                  color: 15158332
+                  timestamp: "{{ ansible_date_time.iso8601 }}"
+                  fields:
+                    - name: "📦 Project"
+                      value: "{{ project_name }}"
+                      inline: true
+                    - name: "🌍 Environment"
+                      value: "{{ environment_name }}"
+                      inline: true
+                    - name: "🌿 Branch"
+                      value: "{{ repo_branch }}"
+                      inline: true
+                    - name: "🖥️ Server"
+                      value: "{{ inventory_hostname }}"
+                      inline: true
+                    - name: "🐧 OS"
+                      value: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
+                      inline: true
+                    - name: "👤 Triggered By"
+                      value: "{{ ansible_user_id }}"
+                      inline: true
+                    - name: "🕐 Started"
+                      value: "{{ deploy_start }}"
+                      inline: true
+                    - name: "🕑 Failed At"
+                      value: "{{ deploy_end }}"
+                      inline: true
+                    - name: "🚨 Action Required"
+                      value: "Check Semaphore task logs immediately and rollback if needed"
+                      inline: false
+                  footer:
+                    text: "Semaphore Ansible Automation • MintHRM DevOps"
+            status_code: 204
