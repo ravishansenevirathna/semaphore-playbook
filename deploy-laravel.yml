@@ -112,6 +112,21 @@
     - name: Disable default Apache site
       command: a2dissite 000-default.conf
 
+    - name: Create SQLite database file
+      file:
+        path: "{{ app_path }}/database/database.sqlite"
+        state: touch
+        owner: www-data
+        group: www-data
+        mode: "0664"
+
+    - name: Run Laravel migrations
+      shell: php artisan migrate --force
+      args:
+        chdir: "{{ app_path }}"
+      environment:
+        COMPOSER_ALLOW_SUPERUSER: "1"
+
     - name: Restart Apache
       systemd:
         name: apache2
