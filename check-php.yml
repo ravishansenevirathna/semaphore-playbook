@@ -5,9 +5,10 @@
 
   tasks:
     - name: Get available PHP packages
-      command: apt-cache search php
+      shell: apt-cache search php | grep -E "^php[0-9]"
       register: php_packages
+      changed_when: false
 
     - name: Show PHP packages
       debug:
-        msg: "{{ php_packages.stdout_lines }}"
+        var: php_packages.stdout_lines
