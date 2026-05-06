@@ -1,0 +1,15 @@
+---
+- name: DFCC Git Pull and Restart Apache
+  hosts: dfcc
+  become: yes
+
+  tasks:
+    - name: Git pull latest code
+      command: git pull
+      args:
+        chdir: /var/www/minthrm/htdocs
+
+    - name: Restart apache2
+      systemd:
+        name: apache2
+        state: restarted
