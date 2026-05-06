@@ -8,6 +8,7 @@
     repo_url: https://github.com/laravel/laravel.git
     repo_branch: master
     ansible_remote_tmp: /tmp/.ansible/tmp
+    discord_webhook_url: "{{ lookup('env', 'DISCORD_WEBHOOK_URL') }}"
 
   tasks:
 
@@ -127,7 +128,7 @@
 
     - name: Send Discord notification
       uri:
-        url: "https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
+        url: "{{ discord_webhook_url }}"
         method: POST
         body_format: json
         body:
