@@ -11,6 +11,7 @@
     project_name: "Laravel EC2"
     environment_name: "Production"
     discord_webhook_url: "{{ lookup('env', 'DISCORD_WEBHOOK_URL') }}"
+    triggered_by: "DevOps Team"
 
   tasks:
 
@@ -144,7 +145,7 @@
             method: POST
             body_format: json
             body:
-              username: "Semaphore CI/CD"
+              username: "Semaphore Release Automation"
               embeds:
                 - title: "✅ Deployment Successful"
                   color: 3066993
@@ -166,7 +167,7 @@
                       value: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
                       inline: true
                     - name: "👤 Triggered By"
-                      value: "{{ ansible_user_id }}"
+                      value: "{{ triggered_by }}"
                       inline: true
                     - name: "🕐 Started"
                       value: "{{ deploy_start }}"
@@ -190,7 +191,7 @@
             method: POST
             body_format: json
             body:
-              username: "Semaphore CI/CD"
+              username: "Semaphore Release Automation"
               embeds:
                 - title: "❌ Deployment FAILED"
                   color: 15158332
@@ -212,7 +213,7 @@
                       value: "{{ ansible_distribution }} {{ ansible_distribution_version }}"
                       inline: true
                     - name: "👤 Triggered By"
-                      value: "{{ ansible_user_id }}"
+                      value: "{{ triggered_by }}"
                       inline: true
                     - name: "🕐 Started"
                       value: "{{ deploy_start }}"
