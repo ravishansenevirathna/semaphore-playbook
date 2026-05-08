@@ -1,6 +1,6 @@
 ---
 - name: Test connection and create folder
-  hosts: dfcc
+  hosts: prod
   become: yes
 
   tasks:
