@@ -1,0 +1,16 @@
+---
+- name: Test connection and create folder
+  hosts: dfcc
+  become: yes
+
+  tasks:
+    - name: Create test folder
+      file:
+        path: /tmp/semaphore-test
+        state: directory
+        mode: '0755'
+
+    - name: Create test file
+      copy:
+        content: "Semaphore connected successfully from mint-thirdparty at {{ ansible_date_time.iso8601 }}"
+        dest: /tmp/semaphore-test/hello.txt
