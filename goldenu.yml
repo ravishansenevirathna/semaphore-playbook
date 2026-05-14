@@ -10,4 +10,4 @@
     #     chdir: /var/www/minthrm/htdocs
 
     - name: Restart apache2
-      shell: /usr/sbin/apachectl restart
+      shell: /usr/sbin/apachectl graceful
