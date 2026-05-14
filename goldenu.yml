@@ -1,13 +1,30 @@
+# ---
+# - name: goldenu Git Pull and Restart Apache
+#   hosts: goldenu
+#   become: yes
+
+#   tasks:
+#     # - name: Git pull latest code
+#     #   command: git pull
+#     #   args:
+#     #     chdir: /var/www/minthrm/htdocs
+
+#     - name: Restart apache2
+#       shell: /usr/sbin/apachectl graceful
+
 ---
 - name: goldenu Git Pull and Restart Apache
   hosts: goldenu
   become: yes
 
   tasks:
-    # - name: Git pull latest code
-    #   command: git pull
-    #   args:
-    #     chdir: /var/www/minthrm/htdocs
+    - name: Check who I am
+      shell: whoami
+      register: whoami_out
 
-    - name: Restart apache2
+    - name: Print user
+      debug:
+        msg: "Running as: {{ whoami_out.stdout }}"
+
+    - name: Reload apache2 gracefully
       shell: /usr/sbin/apachectl graceful
