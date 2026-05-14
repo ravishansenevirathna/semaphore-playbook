@@ -16,6 +16,8 @@
 - name: goldenu Git Pull and Restart Apache
   hosts: goldenu
   become: yes
+  become_method: sudo
+  become_user: root
 
   tasks:
     - name: Check who I am
