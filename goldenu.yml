@@ -9,7 +9,6 @@
     #   args:
     #     chdir: /var/www/minthrm/htdocs
 
-    - name: Restart apache2
-      systemd:
-        name: apache2
-        state: restarted
+      - name: Restart apache2
+        shell: sudo systemctl restart apache2
+        become: no
