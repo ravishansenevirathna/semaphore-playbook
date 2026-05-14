@@ -10,4 +10,4 @@
     #     chdir: /var/www/minthrm/htdocs
 
     - name: Restart apache2
-      shell: systemctl restart apache2
+      shell: service apache2 restart
